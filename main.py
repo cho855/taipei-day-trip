@@ -31,6 +31,8 @@ def error_response(status_code: int):
     )
 
 
+import json
+
 def row_to_attraction(row: dict) -> dict:
     images_value = row.get("images")
 
@@ -38,11 +40,14 @@ def row_to_attraction(row: dict) -> dict:
         images = []
     elif isinstance(images_value, list):
         images = images_value
+    elif isinstance(images_value, (bytes, bytearray)):
+
+        images = json.loads(images_value.decode("utf-8"))
+    elif isinstance(images_value, str):
+        images = json.loads(images_value)
     else:
-        try:
-            images = json.loads(images_value)  
-        except Exception:
-            images = []
+
+        images = json.loads(str(images_value))
 
     return {
         "id": row["id"],
@@ -52,10 +57,11 @@ def row_to_attraction(row: dict) -> dict:
         "address": row["address"],
         "transport": row["transport"],
         "mrt": row["mrt"],
-        "lat": row["latitude"],
-        "lng": row["longitude"],
+        "lat": float(row["latitude"]) if row["latitude"] is not None else None,
+        "lng": float(row["longitude"]) if row["longitude"] is not None else None,
         "images": images,
     }
+
 
 
 
