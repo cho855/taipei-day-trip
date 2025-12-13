@@ -34,10 +34,15 @@ def error_response(status_code: int):
 def row_to_attraction(row: dict) -> dict:
     images_value = row.get("images")
 
-    if images_value is not None and str(images_value).strip() != "":
-        images = str(images_value).split(",")
-    else:
+    if images_value is None:
         images = []
+    elif isinstance(images_value, list):
+        images = images_value
+    else:
+        try:
+            images = json.loads(images_value)  
+        except Exception:
+            images = []
 
     return {
         "id": row["id"],
@@ -51,6 +56,7 @@ def row_to_attraction(row: dict) -> dict:
         "lng": row["longitude"],
         "images": images,
     }
+
 
 
 
