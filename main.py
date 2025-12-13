@@ -1,181 +1,45 @@
-
-
-from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from app import app as static_app  # 引入 app.py 裡的 app
-import mysql.connector
-import json
 from typing import Optional, List
 
+import mysql.connector
+from fastapi import Query
+from fastapi.responses import JSONResponse
 
-
-app = FastAPI()
-
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-app.include_router(static_app.router)
-
+from app import app
 
 
 DB_HOST = "localhost"
-DB_USER = "root"          
-DB_PASSWORD = "abc6788"   
-DB_NAME = "taipei_trip"  
+DB_USER = "tripuser"
+DB_PASSWORD = "abc6788"
+DB_NAME = "taipei_trip"
+
+PAGE_SIZE = 8  
 
 
 def get_connection():
-    try:
-        conn = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME
-        )
-        return conn
-    except Exception as e:
-        print(" MySQL 連線錯誤：", e)
-        raise
+    return mysql.connector.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+    )
 
 
-# =========================================================
-# 三、小工具：把 images 欄位轉成 Python list
-# =========================================================
-
-def parse_images(images_value):
-
-    if images_value is None:
-        return []
-
-    if isinstance(images_value, list):
-        return images_value
-
-    try:
-        return json.loads(images_value)
-    except Exception:
-        return []
+def error_response(status_code: int):
+    return JSONResponse(
+        content={"error": True, "message": "請按照情境提供對應的錯誤訊息"},
+        status_code=status_code,
+    )
 
 
-@app.get("/api/attractions")
-def get_attractions(
-    page: int = 0,
-    keyword: Optional[str] = Query(None),
-    category: Optional[str] = Query(None)
-):
-    page_size = 12
+def row_to_attraction(row: dict) -> dict:
+    images_value = row.get("images")
 
-    if page < 0:
-        page = 0
-
-    offset = page * page_size
-
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    where_clauses = []
-    params: List = []
-
-    if keyword:
-        where_clauses.append("(name LIKE %s OR description LIKE %s)")
-        kw = f"%{keyword}%"
-        params.extend([kw, kw])
-
-    if category:
-        where_clauses.append("category = %s")
-        params.append(category)
-
-    where_sql = ""
-    if where_clauses:
-        where_sql = "WHERE " + " AND ".join(where_clauses)
-
-    sql = f"""
-        SELECT
-            id,
-            name,
-            category,
-            description,
-            address,
-            transport,
-            mrt,
-            latitude,
-            longitude,
-            images
-        FROM attraction
-        {where_sql}
-        LIMIT %s OFFSET %s
-    """
-
-    params.extend([page_size, offset])
-
-    cursor.execute(sql, params)
-    rows = cursor.fetchall()
-
-    attractions = []
-    for row in rows:
-        attractions.append({
-            "id": row["id"],
-            "name": row["name"],
-            "category": row["category"],
-            "description": row["description"],
-            "address": row["address"],
-            "transport": row["transport"],
-            "mrt": row["mrt"],
-            "latitude": float(row["latitude"]) if row["latitude"] is not None else None,
-            "longitude": float(row["longitude"]) if row["longitude"] is not None else None,
-            "images": parse_images(row["images"]),
-        })
-
-    next_page = page + 1 if len(attractions) == page_size else None
-
-    cursor.close()
-    conn.close()
+    if images_value is not None and str(images_value).strip() != "":
+        images = str(images_value).split(",")
+    else:
+        images = []
 
     return {
-        "nextPage": next_page,
-        "data": attractions
-    }
-
-
-
-
-@app.get("/api/attraction/{attraction_id}")
-def get_attraction(attraction_id: int):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    sql = """
-        SELECT
-            id,
-            name,
-            category,
-            description,
-            address,
-            transport,
-            mrt,
-            latitude,
-            longitude,
-            images
-        FROM attraction
-        WHERE id = %s
-    """
-    cursor.execute(sql, [attraction_id])
-    row = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
-
-    if row is None:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": True,
-                "message": "景點編號不正確"
-            }
-        )
-
-    data = {
         "id": row["id"],
         "name": row["name"],
         "category": row["category"],
@@ -183,85 +47,158 @@ def get_attraction(attraction_id: int):
         "address": row["address"],
         "transport": row["transport"],
         "mrt": row["mrt"],
-        "latitude": float(row["latitude"]) if row["latitude"] is not None else None,
-        "longitude": float(row["longitude"]) if row["longitude"] is not None else None,
-        "images": parse_images(row["images"]),
-    }
-
-    return {
-        "data": data
+        "lat": row["latitude"],
+        "lng": row["longitude"],
+        "images": images,
     }
 
 
 
+# 1. GET /api/attractions
+@app.get("/api/attractions")
+def get_attractions(
+    page: int = Query(0, ge=0),
+    category: Optional[str] = None,  
+    keyword: Optional[str] = None,   
+):
+    try:
+        offset = page * PAGE_SIZE
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        sql = "SELECT * FROM attraction"
+        params: List[object] = []
+        has_where = False
+
+
+        if category is not None and category.strip() != "":
+            cat = category.strip()
+
+            if not has_where:
+                sql += " WHERE "
+                has_where = True
+            else:
+                sql += " AND "
+
+            sql += "category = %s"
+            params.append(cat)
+
+
+        if keyword is not None and keyword.strip() != "":
+            kw_raw = keyword.strip()
+            kw_like = "%" + kw_raw + "%"
+
+            if not has_where:
+                sql += " WHERE "
+                has_where = True
+            else:
+                sql += " AND "
+
+            sql += "(name LIKE %s OR mrt = %s)"
+            params.append(kw_like)
+            params.append(kw_raw)
+
+
+        sql += " ORDER BY id LIMIT %s OFFSET %s"
+        params.append(PAGE_SIZE + 1)
+        params.append(offset)
+
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+        conn.close()
+
+        if len(rows) > PAGE_SIZE:
+            next_page = page + 1
+            rows = rows[:PAGE_SIZE]
+        else:
+            next_page = None
+
+        data = []
+        for r in rows:
+            data.append(row_to_attraction(r))
+
+        return {"nextPage": next_page, "data": data}
+
+    except Exception:
+        return error_response(500)
+
+
+
+# 2. GET /api/attraction/{attractionId}
+@app.get("/api/attraction/{attractionId}")
+def get_attraction(attractionId: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM attraction WHERE id = %s", (attractionId,))
+        row = cursor.fetchone()
+
+        conn.close()
+
+        if row is None:
+            return error_response(400)
+
+        return {"data": row_to_attraction(row)}
+
+    except Exception:
+        return error_response(500)
+
+
+
+# 3. GET /api/categories
 
 @app.get("/api/categories")
 def get_categories():
-    conn = get_connection()
-    cursor = conn.cursor()
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT DISTINCT category
-        FROM attraction
-        WHERE category IS NOT NULL AND category != ''
-        ORDER BY category
-    """)
+        cursor.execute(
+            "SELECT DISTINCT category FROM attraction "
+            "WHERE category IS NOT NULL AND category != '' "
+            "ORDER BY category"
+        )
+        rows = cursor.fetchall()
+        conn.close()
 
-    rows = cursor.fetchall()
+        categories = []
+        for r in rows:
+            categories.append(r["category"])
 
-    cursor.close()
-    conn.close()
+        return {"data": categories}
 
-    categories = [row[0] for row in rows]
-
-    return {
-        "data": categories
-    }
-
-
+    except Exception:
+        return error_response(500)
 
 
+
+# 4. GET /api/mrts
 @app.get("/api/mrts")
 def get_mrts():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT mrt, id, name
-        FROM attraction
-        WHERE mrt IS NOT NULL AND mrt != ''
-    """)
+        cursor.execute(
+            """
+            SELECT mrt, COUNT(*) AS count
+            FROM attraction
+            WHERE mrt IS NOT NULL AND mrt != ''
+            GROUP BY mrt
+            ORDER BY count DESC, mrt ASC
+            """
+        )
+        rows = cursor.fetchall()
+        conn.close()
 
-    rows = cursor.fetchall()
+        mrts = []
+        for r in rows:
+            mrts.append(r["mrt"])
 
-    cursor.close()
-    conn.close()
+        return {"data": mrts}
 
-    mrt_map = {}
-
-    for row in rows:
-        mrt_name = row["mrt"]
-        if mrt_name not in mrt_map:
-            mrt_map[mrt_name] = []
-        mrt_map[mrt_name].append({
-            "id": row["id"],
-            "name": row["name"]
-        })
-
-
-    sorted_mrts = sorted(
-        mrt_map.items(),
-        key=lambda item: len(item[1]),
-        reverse=True
-    )
-
-    result = []
-    for mrt_name, stations in sorted_mrts:
-        result.append({
-            "mrt": mrt_name,
-            "stations": stations
-        })
-
-    return {
-        "data": result
-    }
+    except Exception:
+        return error_response(500)
