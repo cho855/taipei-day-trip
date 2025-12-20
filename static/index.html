@@ -1,11 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Index</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台北一日遊</title>
+
+
+  <link rel="stylesheet" href="/static/index.css" />
 </head>
 <body>
-  
+
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="logo">台北一日遊</a>
+      <div class="nav-right">
+         <a class="nav-link" href="/booking">預定行程</a>
+         <button type="button" class="nav-btn">登入/註冊</button>
+      </div>
+    </div>
+  </header>
+
+
+  <section class="hero">
+    <div class="container hero-content">
+      <h1>輕鬆享受台北一日悠閒</h1>
+      <p>探索每個角落，體驗城市的深度旅遊行程</p>
+
+      <div class="search-bar">      
+        <div class="category-wrapper">
+          <button id="category-btn" class="category-btn">
+            <span id="category-text">全部分類</span>
+            <span class="category-arrow">▾</span>
+          </button>
+
+          <div id="category-panel" class="category-panel hidden">
+            <div id="category-list" class="category-list"></div>
+          </div>
+        </div>
+
+        
+        <input id="keyword-input" type="text" placeholder="輸入景點名稱查詢" />
+
+    
+        <button id="search-btn" class="search-btn">
+  <img src="/static/images/search.png" alt="search" />
+</button>
+      </div>
+    </div>
+  </section>
+
+ 
+  <section class="mrt">
+    <div class="container mrt-inner">
+      <button id="mrt-left" class="arrow">
+        <img src="/static/images/left.png" alt="left" />
+      </button>
+      <div class="mrt-scroll">
+        <div id="mrt-list" class="mrt-list"></div>
+      </div>
+      <button id="mrt-right" class="arrow">
+        <img src="/static/images/right.png" alt="right" />
+      </button>
+    </div>
+  </section>
+
+
+  <section class="attractions">
+    <div class="container">
+      <div id="attraction-list" class="grid"></div>
+      <div id="sentinel"></div>
+    </div>
+  </section>
+
+
+  <footer class="footer">
+    COPYRIGHT © 2021 台北一日遊
+  </footer>
+
+
+  <script src="/static/index.js" defer></script>
 </body>
 </html>

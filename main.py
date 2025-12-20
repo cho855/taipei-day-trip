@@ -1,11 +1,16 @@
 from typing import Optional, List
-
+from fastapi import Query,FastAPI
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+import json
 import mysql.connector
-from fastapi import Query
-from fastapi.responses import JSONResponse
 
-from app import app
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.get("/")
+def read_index():
+    return FileResponse("static/index.html")
 
 DB_HOST = "localhost"
 DB_USER = "tripuser"
@@ -14,6 +19,7 @@ DB_NAME = "taipei_trip"
 
 PAGE_SIZE = 8  
 
+ 
 
 def get_connection():
     return mysql.connector.connect(
@@ -31,7 +37,7 @@ def error_response(status_code: int):
     )
 
 
-import json
+
 
 def row_to_attraction(row: dict) -> dict:
     images_value = row.get("images")
@@ -107,7 +113,7 @@ def get_attractions(
             else:
                 sql += " AND "
 
-            sql += "(name LIKE %s OR mrt = %s)"
+            sql += "(name LIKE %s OR mrt LIKE %s)"
             params.append(kw_like)
             params.append(kw_raw)
 
@@ -133,12 +139,18 @@ def get_attractions(
 
         return {"nextPage": next_page, "data": data}
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        print("\n==== ERROR /api/attractions ====")
+        print("Exception:", repr(e))
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
         return error_response(500)
 
 
-
 # 2. GET /api/attraction/{attractionId}
+
+# 景點資料（JSON API）
 @app.get("/api/attraction/{attractionId}")
 def get_attraction(attractionId: int):
     try:
@@ -147,7 +159,6 @@ def get_attraction(attractionId: int):
 
         cursor.execute("SELECT * FROM attraction WHERE id = %s", (attractionId,))
         row = cursor.fetchone()
-
         conn.close()
 
         if row is None:
@@ -155,7 +166,12 @@ def get_attraction(attractionId: int):
 
         return {"data": row_to_attraction(row)}
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        print("\n==== ERROR /api/attraction/{id} ====")
+        print("Exception:", repr(e))
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
         return error_response(500)
 
 
@@ -182,7 +198,8 @@ def get_categories():
 
         return {"data": categories}
 
-    except Exception:
+    except Exception as e:
+        print("ERROR /api/categories:", repr(e))
         return error_response(500)
 
 
@@ -212,5 +229,6 @@ def get_mrts():
 
         return {"data": mrts}
 
-    except Exception:
+    except Exception as e:
+        print("ERROR /api/mrts:", repr(e))
         return error_response(500)
