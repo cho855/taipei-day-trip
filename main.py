@@ -12,6 +12,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def read_index():
     return FileResponse("static/index.html")
 
+#/attraction/{id}
+@app.get("/attraction/{attractionId}")
+def read_attraction(attractionId: int):
+    return FileResponse("static/attraction.html")
+
+
 DB_HOST = "localhost"
 DB_USER = "tripuser"
 DB_PASSWORD = "abc6788"
