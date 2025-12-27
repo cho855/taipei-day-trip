@@ -3,6 +3,7 @@ const mainImg = document.querySelector("#main-image");
 const btnPrev = document.querySelector("#img-prev");
 const btnNext = document.querySelector("#img-next");
 const dotsEl = document.querySelector("#dots");
+const indicatorEl = document.querySelector("#indicator-active");
 
 const titleEl = document.querySelector("#title");
 const subtitleEl = document.querySelector("#subtitle");
@@ -16,6 +17,7 @@ const timeRadios = document.querySelectorAll('input[name="time"]');
 let images = [];
 let idx = 0;
 
+
 function getAttractionIdFromPath() {
   const parts = location.pathname.split("/").filter(Boolean);
   const last = parts[parts.length - 1];
@@ -23,20 +25,22 @@ function getAttractionIdFromPath() {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+function clampIndex(i, len) {
+  if (len <= 0) return 0;
+  return (i + len) % len;
+}
+
 
 function updatePriceByTimeValue(timeValue) {
-  // morning => 2000, afternoon => 2500
   const price = timeValue === "afternoon" ? 2500 : 2000;
-  priceEl.textContent = `新台幣 ${price} 元`;
+  if (priceEl) priceEl.textContent = `新台幣 ${price} 元`;
 }
 
 function initTimePricing() {
   if (!priceEl || !timeRadios || timeRadios.length === 0) return;
 
-
   const checked = document.querySelector('input[name="time"]:checked');
   updatePriceByTimeValue(checked ? checked.value : "morning");
-
 
   timeRadios.forEach((r) => {
     r.addEventListener("change", (e) => {
@@ -46,37 +50,64 @@ function initTimePricing() {
 }
 
 
-function setImage(i) {
-  if (!Array.isArray(images) || images.length === 0) {
-    mainImg.removeAttribute("src");
-    mainImg.alt = "no image";
-    dotsEl.innerHTML = "";
-    btnPrev.disabled = true;
-    btnNext.disabled = true;
+function updateIndicator() {
+  if (!dotsEl || !indicatorEl) return;
+
+  const len = images.length;
+  if (len <= 0) {
+    indicatorEl.style.width = "0px";
+    indicatorEl.style.transform = "translateX(0px)";
     return;
   }
 
-  idx = (i + images.length) % images.length;
+
+  const trackW = dotsEl.clientWidth;    
+  const segW = trackW / len;
+  const x = segW * idx;
+
+  indicatorEl.style.width = `${segW}px`;
+  indicatorEl.style.transform = `translateX(${x}px)`;
+}
+
+
+function setImage(i) {
+  const len = images.length;
+
+  if (!Array.isArray(images) || len === 0) {
+    if (mainImg) {
+      mainImg.removeAttribute("src");
+      mainImg.alt = "no image";
+    }
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = true;
+    if (indicatorEl) {
+      indicatorEl.style.width = "0px";
+      indicatorEl.style.transform = "translateX(0px)";
+    }
+    return;
+  }
+
+  idx = clampIndex(i, len);
+
   mainImg.src = images[idx];
-  mainImg.alt = titleEl.textContent || "attraction";
+  mainImg.alt = (titleEl && titleEl.textContent) ? titleEl.textContent : "attraction";
 
+  if (btnPrev) btnPrev.disabled = len <= 1;
+  if (btnNext) btnNext.disabled = len <= 1;
 
-  dotsEl.innerHTML = images
-    .map((_, di) => `<span class="dot ${di === idx ? "active" : ""}" data-i="${di}"></span>`)
-    .join("");
-
-  btnPrev.disabled = images.length <= 1;
-  btnNext.disabled = images.length <= 1;
+  updateIndicator();
 }
 
 function next() { setImage(idx + 1); }
 function prev() { setImage(idx - 1); }
 
+
 async function loadAttraction() {
   const attractionId = getAttractionIdFromPath();
   if (!attractionId) {
-    titleEl.textContent = "景點不存在";
-    subtitleEl.textContent = "";
+    if (titleEl) titleEl.textContent = "景點不存在";
+    if (subtitleEl) subtitleEl.textContent = "";
+    images = [];
     setImage(0);
     return;
   }
@@ -85,46 +116,56 @@ async function loadAttraction() {
   try {
     res = await fetch(`/api/attraction/${attractionId}`);
   } catch (err) {
-    titleEl.textContent = "載入失敗";
-    subtitleEl.textContent = "請稍後再試";
+    if (titleEl) titleEl.textContent = "載入失敗";
+    if (subtitleEl) subtitleEl.textContent = "請稍後再試";
+    images = [];
     setImage(0);
     return;
   }
 
-  const data = await res.json();
-
-  if (!data || !data.data) {
-    titleEl.textContent = "景點不存在";
-    subtitleEl.textContent = "";
+  if (!res.ok) {
+    if (titleEl) titleEl.textContent = "景點不存在";
+    if (subtitleEl) subtitleEl.textContent = "";
+    images = [];
     setImage(0);
     return;
   }
 
-  const a = data.data;
+  const payload = await res.json();
+  if (!payload || !payload.data) {
+    if (titleEl) titleEl.textContent = "景點不存在";
+    if (subtitleEl) subtitleEl.textContent = "";
+    images = [];
+    setImage(0);
+    return;
+  }
 
-  titleEl.textContent = a.name || "—";
-  subtitleEl.textContent = `${a.category || ""}${a.mrt ? " at " + a.mrt : ""}`.trim();
+  const a = payload.data;
 
-  descEl.textContent = a.description || "";
-  addressEl.textContent = a.address || "—";
-  transportEl.textContent = a.transport || "—";
+  if (titleEl) titleEl.textContent = a.name || "—";
+  if (subtitleEl) {
+    subtitleEl.textContent = `${a.category || ""}${a.mrt ? " at " + a.mrt : ""}`.trim() || "—";
+  }
+
+  if (descEl) descEl.textContent = a.description || "";
+  if (addressEl) addressEl.textContent = a.address || "—";
+  if (transportEl) transportEl.textContent = a.transport || "—";
 
   images = Array.isArray(a.images) ? a.images.filter(Boolean) : [];
   setImage(0);
+
+
+  requestAnimationFrame(updateIndicator);
 }
 
 
-btnPrev.addEventListener("click", prev);
-btnNext.addEventListener("click", next);
+if (btnPrev) btnPrev.addEventListener("click", prev);
+if (btnNext) btnNext.addEventListener("click", next);
 
-dotsEl.addEventListener("click", (e) => {
-  const t = e.target;
-  if (!t.classList.contains("dot")) return;
-  const i = Number(t.dataset.i);
-  if (!Number.isInteger(i)) return;
-  setImage(i);
+
+window.addEventListener("resize", () => {
+  updateIndicator();
 });
-
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") prev();

@@ -6,8 +6,7 @@
   <title>台北一日遊 - 景點</title>
   <link rel="stylesheet" href="/static/attraction.css" />
 </head>
-<body>
-  <!-- NAV -->
+<body>  
   <header class="nav">
     <div class="container nav-inner">
       <a href="/" class="logo">台北一日遊</a>
@@ -18,24 +17,28 @@
     </div>
   </header>
 
-  <!-- MAIN -->
+  
   <main class="container main">
-    <section class="top">
+    <section class="top">      
       <div class="gallery">
         <div class="viewer">
-          <img id="main-image" alt="attraction" />
-          <button id="img-prev" class="pic-btn pic-btn-left" aria-label="prev"></button>
-          <button id="img-next" class="pic-btn pic-btn-right" aria-label="next"></button>
+          <img id="main-image" alt="attraction" loading="eager" decoding="async" />
 
-          <div id="dots" class="dots"></div>
+          <button id="img-prev" type="button" class="pic-btn pic-btn-left" aria-label="prev"></button>
+          <button id="img-next" type="button" class="pic-btn pic-btn-right" aria-label="next"></button>
+
+
+          <div id="dots">
+            <div id="indicator-active"></div>
+          </div>
         </div>
       </div>
 
+      
       <div class="booking">
         <h1 id="title" class="title"></h1>
-        <div id="subtitle" class="subtitle"></div>
-        <p id="subtitle" class="subtitle">—</p>
-        
+        <div id="subtitle" class="subtitle">—</div>
+
         <div class="booking-panel">
           <h2>訂購導覽行程</h2>
           <p>以此景點為中心的一日行程，帶您探索城市角落故事</p>
@@ -53,13 +56,14 @@
 
           <div class="row">
             <div class="label">導覽費用：</div>
-            <div id="price">新台幣 2000 元</div>
+            <span id="price">新台幣 2000 元</span>
           </div>
 
-          <button class="primary">開始預約行程</button>
+          <button type="button" class="primary">開始預約行程</button>
         </div>
       </div>
     </section>
+
 
     <section class="info">
       <p id="desc" class="desc"></p>

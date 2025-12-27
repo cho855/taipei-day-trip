@@ -20,6 +20,7 @@ button, input{ font-family: inherit; }
   margin: 0 auto;
 }
 
+
 .nav{
   position: sticky;
   top: 0;
@@ -47,7 +48,8 @@ button, input{ font-family: inherit; }
   gap: 20px;
 }
 
-.nav-link{
+.nav-link,
+.nav-btn{
   font-size: 16px;
   color: #666;
 }
@@ -55,10 +57,9 @@ button, input{ font-family: inherit; }
 .nav-btn{
   background: none;
   border: 0;
-  font-size: 16px;
-  color: #666;
   cursor: pointer;
 }
+
 
 main.container.main{ padding: 0; }
 
@@ -71,6 +72,7 @@ section.top{
   justify-content: space-between;
   gap: 60px;
 }
+
 
 .gallery{ flex: 0 0 540px; }
 
@@ -90,30 +92,30 @@ section.top{
   object-fit: cover;
 }
 
-#dots.dots{
+
+#dots{
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: 0;
   transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  z-index: 6;
+  width: 540px;
+  height: 5px;
+  background: #fff;
+  z-index: 10;
+  overflow: hidden;
 }
 
-#dots .dot{
-  width: 12px;
-  height: 4px;
-  border-radius: 999px;
-  border: 0;
-  background: rgba(255,255,255,0.45);
-  cursor: pointer;
-  transition: width .15s ease, background-color .15s ease;
+#dots #indicator-active{
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: #000;
+  width: 0;                 
+  transform: translateX(0); 
+  transition: transform 200ms ease;
 }
 
-#dots .dot.active{
-  width: 24px;
-  background: rgba(255,255,255,0.95);
-}
 
 .pic-btn{
   position:absolute;
@@ -123,15 +125,12 @@ section.top{
   height:36px;
   border-radius:50%;
   border:0;
-
   background: rgba(220,220,220,0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   cursor:pointer;
   z-index:10;
-
   -webkit-appearance:none;
   appearance:none;
   outline:none;
@@ -160,14 +159,11 @@ section.top{
 }
 
 .pic-btn-left{ left:10px; }
-.pic-btn-left::before{
-  transform: translate(-35%,-50%) rotate(135deg);
-}
+.pic-btn-left::before{ transform: translate(-35%,-50%) rotate(135deg); }
 
 .pic-btn-right{ right:10px; }
-.pic-btn-right::before{
-  transform: translate(-65%,-50%) rotate(-45deg);
-}
+.pic-btn-right::before{ transform: translate(-65%,-50%) rotate(-45deg); }
+
 
 .booking{
   flex: 0 0 600px;
@@ -179,7 +175,7 @@ section.top{
   margin: 0 0 8px 0;
   font-size: 24px;
   font-weight: 700;
-  color: #666; 
+  color: #666;
 }
 
 .subtitle{
@@ -252,6 +248,55 @@ section.top{
 
 .booking-panel .primary:hover{ filter: brightness(0.95); }
 
+
+.booking-panel input[type="radio"]{
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin: 0;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #ffffff;
+  cursor: pointer;
+}
+
+.booking-panel input[type="radio"]:checked{
+  background: #448899;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.booking-panel .radio{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #444;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+
+body main.container.main .booking-panel #date{
+  -webkit-appearance: none;
+  appearance: none;
+  background: #fff url("/static/images/calendar.png") no-repeat right 10px center / 18px 18px !important;
+  padding-right: 40px !important;
+}
+
+body main.container.main .booking-panel #date::-webkit-calendar-picker-indicator{
+  opacity: 0;
+  cursor: pointer;
+  width: 36px;
+  height: 100%;
+  margin: 0;
+}
+
+body main.container.main .booking-panel #date::-webkit-datetime-edit{
+  padding: 0;
+}
+
+
 section.info{ padding: 40px 0 60px; }
 
 .desc{
@@ -282,8 +327,9 @@ section.info{ padding: 40px 0 60px; }
   text-align: center;
   padding: 40px 0;
   font-size: 16px;
-  font-weight: 700; 
+  font-weight: 700;
 }
+
 
 @media (max-width: 1200px){
   main.container.main{ padding: 0 10px; }
@@ -311,10 +357,21 @@ section.info{ padding: 40px 0 60px; }
     width: 100%;
     height: 100%;
   }
+
+
+  #dots{
+    width: 100%;
+    left: 0;
+    transform: none;
+  }
 }
 
+
 @media (max-width: 600px){
-  main.container.main{ padding: 0 10px; }
+  .nav{ border-bottom: 0; }
+
+
+  main.container.main{ padding: 0; }
 
   section.top{
     margin-top: 0;
@@ -330,19 +387,27 @@ section.info{ padding: 40px 0 60px; }
 
   .viewer{
     width: 100%;
-    height: 240px;
-    aspect-ratio: auto;
+    height: auto;
+    aspect-ratio: 360 / 240;
     border-radius: 0;
     overflow: hidden;
   }
 
-  #dots.dots{ bottom: 10px; }
+  #dots{
+    width: 100%;
+    left: 0;
+    transform: none;
+    height: 5px;
+  }
 
   .booking{
     width: 100%;
+    padding: 0 10px;
     flex: none;
     height: auto;
   }
+
+  section.info{ padding: 20px 10px 40px; }
 
   .title{
     font-size: 22px;
@@ -354,89 +419,69 @@ section.info{ padding: 40px 0 60px; }
     font-size: 14px;
   }
 
+
   .booking-panel{
-    width: 100%;
-    border-radius: 6px;
-    padding: 16px;
+    width: 340px;
+    height: 300px;
+    margin: 0 auto;
+    padding: 20px;       
+    overflow: hidden;
   }
 
-  .booking-panel .label{
-    width: 76px;
-    font-size: 14px;
-  }
-
-  .booking-panel input[type="date"]{
-    width: 200px;
-    max-width: 100%;
-  }
-
-  section.info{ padding: 20px 0 40px; }
-
-  .desc{
-    font-size: 14px;
-    line-height: 1.9;
-    margin-bottom: 18px;
-  }
-
-  .block-title{
+  
+  .booking-panel h2{
+    width: 300px;
+    height: 22px;
+    line-height: 22px;
+    margin: 0 0 10px 0;
     font-size: 16px;
-    margin-bottom: 6px;
   }
 
-  .block-text{
-    font-size: 14px;
-    line-height: 1.9;
+  
+  .booking-panel p{
+    width: 300px;
+    height: 48px;
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    line-height: 24px;
+    overflow: hidden;
   }
 
-  .footer{ padding: 34px 0; }
-}
+  
+  .booking-panel .row{
+    width: 300px;
+    margin: 10px 0;
+    gap: 10px;
+    align-items: center;
+  }
 
+  
+  .booking-panel .label{
+    width: 96px;
+    flex: 0 0 96px;
+    white-space: nowrap;
+    word-break: keep-all;
+    font-size: 16px;
+  }
 
-body main.container.main .booking-panel #date{
-  -webkit-appearance: none;
-  appearance: none;
-  background: #fff url("/static/images/calendar.png") no-repeat right 10px center / 18px 18px !important;
-  padding-right: 40px !important;
-}
+  
+  .booking-panel input[type="date"]{
+    height: 35px;
+    flex: 1 1 auto;
+    width: 0;          
+    min-width: 0;
+  }
 
-body main.container.main .booking-panel #date::-webkit-calendar-picker-indicator{
-  opacity: 0;
-  cursor: pointer;
-  width: 36px;
-  height: 100%;
-  margin: 0;
-}
-
-body main.container.main .booking-panel #date::-webkit-datetime-edit{
-  padding: 0;
-}
-
-
-.booking-panel input[type="radio"]{
-  appearance: none;
-  -webkit-appearance: none;
-
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  margin: 0;
-
-  background: #ffffff;
-  box-shadow: 0 0 0 2px #ffffff;
-
-  cursor: pointer;
-}
-
-.booking-panel input[type="radio"]:checked{
-  background: #448899;
-  box-shadow: 0 0 0 2px #ffffff;
-}
-
-.booking-panel .radio{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #444;
-  margin-right: 10px;
+  
+  .booking-panel .primary{
+    width: 154px;
+    height: 36px;
+    margin-top: 16px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 16px;
+  }
 }
