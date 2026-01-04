@@ -7,6 +7,8 @@
 
 
   <link rel="stylesheet" href="/static/index.css" />
+  <link rel="stylesheet" href="/static/auth.css" />
+
 </head>
 <body>
 
@@ -16,7 +18,7 @@
       <a href="/" class="logo">台北一日遊</a>
       <div class="nav-right">
          <a class="nav-link" href="/booking">預定行程</a>
-         <button type="button" class="nav-btn">登入/註冊</button>
+         <button id="nav-auth" type="button" class="nav-btn">登入/註冊</button>
       </div>
     </div>
   </header>
@@ -77,8 +79,52 @@
   <footer class="footer">
     COPYRIGHT © 2021 台北一日遊
   </footer>
+<!-- =========================
+     Auth Modal (for auth.js)
+========================== -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-dialog is-signin" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <div class="auth-topbar"></div>
+
+    <button type="button" class="auth-close" aria-label="close">
+      <img src="/static/images/icon_close.png" alt="close">
+    </button>
+
+    <div class="auth-body">
+      <h3 id="auth-title" class="auth-title">登入會員帳號</h3>
+
+      <!-- Sign In -->
+      <form id="form-signin">
+        <input id="signin-email" class="auth-input" type="email" placeholder="輸入 Email" required />
+        <input id="signin-password" class="auth-input" type="password" placeholder="輸入密碼" required />
+        <button type="submit" class="auth-primary-btn">登入帳戶</button>
+
+        <div id="signin-msg" class="auth-msg"></div>
+
+        <div class="auth-switch">
+          還沒有帳戶？<a href="#" id="to-signup" class="auth-link">點此註冊</a>
+        </div>
+      </form>
+
+      <!-- Sign Up -->
+      <form id="form-signup" style="display:none;">
+        <input id="signup-name" class="auth-input" type="text" placeholder="輸入姓名" required />
+        <input id="signup-email" class="auth-input" type="email" placeholder="輸入 Email" required />
+        <input id="signup-password" class="auth-input" type="password" placeholder="輸入密碼" required />
+        <button type="submit" class="auth-primary-btn">註冊帳戶</button>
+
+        <div id="signup-msg" class="auth-msg"></div>
+
+        <div class="auth-switch">
+          已經有帳戶？<a href="#" id="to-signin" class="auth-link">點此登入</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 
+  <script src="/static/auth.js" defer></script>
   <script src="/static/index.js" defer></script>
 </body>
 </html>

@@ -133,7 +133,10 @@ mrtRight.onclick = () => mrtScroll.scrollBy({ left: 300, behavior: "smooth" });
 
 
 
+
+//part4
 window.onload = async () => {
+  await window.initAuth();       // ⭐ 加這行（先檢查登入狀態，決定右上角顯示）
   await loadCategories();
   await loadMRT();
   await load(true);

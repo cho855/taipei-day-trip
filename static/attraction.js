@@ -173,7 +173,8 @@ document.addEventListener("keydown", (e) => {
 });
 
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
+  await window.initAuth();   // ⭐ 最安全：第一行先跑登入狀態檢查
   initTimePricing();
-  loadAttraction();
+  await loadAttraction();
 });

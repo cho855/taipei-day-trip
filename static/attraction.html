@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>台北一日遊 - 景點</title>
   <link rel="stylesheet" href="/static/attraction.css" />
+  <link rel="stylesheet" href="/static/auth.css" />
+
 </head>
 <body>  
   <header class="nav">
@@ -12,7 +14,7 @@
       <a href="/" class="logo">台北一日遊</a>
       <div class="nav-right">
         <a class="nav-link" href="/booking">預定行程</a>
-        <button type="button" class="nav-btn">登入/註冊</button>
+        <button id="nav-auth" type="button" class="nav-btn">登入/註冊</button>
       </div>
     </div>
   </header>
@@ -81,7 +83,8 @@
   </main>
 
   <footer class="footer">COPYRIGHT © 2021 台北一日遊</footer>
-
+  <script src="/static/auth.js" defer></script>
   <script src="/static/attraction.js" defer></script>
+
 </body>
 </html>
