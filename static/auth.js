@@ -1,92 +1,104 @@
-
 /* Part 4 JWT */
-
 
 const navAuthEl =
   document.querySelector("#nav-auth") ||
-  document.querySelector(".nav-right .nav-btn"); 
-
-
+  document.querySelector(".nav-right .nav-btn");
 
 const TOKEN_KEY = "token";
 
 
-function ensureAuthModal() {
-  if (document.querySelector("#auth-overlay")) return;
-
-  const overlay = document.createElement("div");
-  overlay.id = "auth-overlay";
-  overlay.className = "auth-overlay";
-
-  overlay.innerHTML = `
-    <div class="auth-dialog is-signin"">      
-      <button class="auth-close" aria-label="close">
-        <img src="/static/images/icon_close.png" alt="close" />
-    </button>
-
-      <div class="auth-topbar"></div>
-
-      <div class="auth-body">
-        <h2 class="auth-title" id="auth-title">登入會員帳號</h2>
-
-        <!-- Sign In -->
-        <form id="form-signin" class="auth-form">
-          <input id="signin-email" class="auth-input" type="email" placeholder="輸入電子郵件" />
-          <input id="signin-password" class="auth-input" type="password" placeholder="輸入密碼" />
-          <button type="submit" class="auth-primary-btn">登入帳戶</button>
-          <div class="auth-switch">
-            還沒有帳戶？<a href="#" id="to-signup" class="auth-link">點此註冊</a>
-          </div>
-        </form>
-
-        <!-- Sign Up -->
-        <form id="form-signup" class="auth-form" style="display:none;">
-          <input id="signup-name" class="auth-input" type="text" placeholder="輸入姓名" />
-          <input id="signup-email" class="auth-input" type="email" placeholder="輸入電子郵件" />
-          <input id="signup-password" class="auth-input" type="password" placeholder="輸入密碼" />
-          <button type="submit" class="auth-primary-btn">註冊新帳戶</button>
-          <div class="auth-switch">
-            已經有帳戶了？<a href="#" id="to-signin" class="auth-link">點此登入</a>
-          </div>
-        </form>
-
-        <div id="auth-msg" class="auth-msg"></div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
+function bindAuthModalEvents(overlay) {
+  if (!overlay || overlay.dataset.bound === "1") return;
+  overlay.dataset.bound = "1";
 
 
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeAuthModal();
   });
 
-  
-  overlay.querySelector(".auth-close").addEventListener("click", closeAuthModal);
 
-  
-  overlay.querySelector("#to-signup").addEventListener("click", (e) => {
+  overlay.querySelector(".auth-close")?.addEventListener("click", closeAuthModal);
+
+
+  overlay.querySelector("#to-signup")?.addEventListener("click", (e) => {
     e.preventDefault();
     showSignupForm();
   });
 
-  overlay.querySelector("#to-signin").addEventListener("click", (e) => {
+  overlay.querySelector("#to-signin")?.addEventListener("click", (e) => {
     e.preventDefault();
     showSigninForm();
   });
 
-  
-  overlay.querySelector("#form-signup").addEventListener("submit", onSubmitSignup);
-  overlay.querySelector("#form-signin").addEventListener("submit", onSubmitSignin);
+
+  overlay.querySelector("#form-signup")?.addEventListener("submit", onSubmitSignup);
+  overlay.querySelector("#form-signin")?.addEventListener("submit", onSubmitSignin);
 }
 
 
+function ensureAuthModal() {
+  let overlay = document.querySelector("#auth-overlay");
+
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "auth-overlay";
+    overlay.className = "auth-overlay";
+
+    overlay.innerHTML = `
+      <div class="auth-dialog is-signin" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="auth-topbar"></div>
+
+        <button type="button" class="auth-close" aria-label="close">
+          <img src="/static/images/icon_close.png" alt="close" />
+        </button>
+
+        <div class="auth-body">
+          <h3 id="auth-title" class="auth-title">登入會員帳號</h3>
+
+          <form id="form-signin">
+            <input id="signin-email" class="auth-input" type="email" placeholder="輸入 Email" required />
+            <input id="signin-password" class="auth-input" type="password" placeholder="輸入密碼" required />
+            <button type="submit" class="auth-primary-btn">登入帳戶</button>
+
+            <div id="auth-msg" class="auth-msg"></div>
+
+            <div class="auth-switch">
+              還沒有帳戶？<a href="#" id="to-signup" class="auth-link">點此註冊</a>
+            </div>
+          </form>
+
+          <form id="form-signup" style="display:none;">
+            <input id="signup-name" class="auth-input" type="text" placeholder="輸入姓名" required />
+            <input id="signup-email" class="auth-input" type="email" placeholder="輸入 Email" required />
+            <input id="signup-password" class="auth-input" type="password" placeholder="輸入密碼" required />
+            <button type="submit" class="auth-primary-btn">註冊帳戶</button>
+
+            <div id="auth-msg2" class="auth-msg"></div>
+
+            <div class="auth-switch">
+              已經有帳戶？<a href="#" id="to-signin" class="auth-link">點此登入</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+  }
+
+  bindAuthModalEvents(overlay);
+  return overlay;
+}
+
 function openAuthModal() {
-  ensureAuthModal();
+  
+  document.querySelector("#category-panel")?.classList.add("hidden");
+
+  const overlay = ensureAuthModal();
   clearAuthMsg();
   showSigninForm();
-  document.querySelector("#auth-overlay").style.display = "flex";
+  overlay.style.display = "flex";
 }
 
 function closeAuthModal() {
@@ -95,7 +107,16 @@ function closeAuthModal() {
 }
 
 function setAuthMsg(text, isError = false) {
-  const msgEl = document.querySelector("#auth-msg");
+
+  const signinForm = document.querySelector("#form-signin");
+  const signupForm = document.querySelector("#form-signup");
+  const activeForm = signupForm?.style.display === "block" ? signupForm : signinForm;
+
+  const msgEl =
+    activeForm?.querySelector(".auth-msg") ||
+    document.querySelector("#auth-msg") ||
+    document.querySelector("#auth-msg2");
+
   if (!msgEl) return;
 
   msgEl.textContent = text;
@@ -104,7 +125,6 @@ function setAuthMsg(text, isError = false) {
   if (!text) return;
   msgEl.classList.add(isError ? "error" : "success");
 }
-
 
 function clearAuthMsg() {
   setAuthMsg("", false);
@@ -138,17 +158,12 @@ function showSignupForm(keepMsg = false) {
   if (!keepMsg) clearAuthMsg();
 }
 
-
-
-
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
-
 function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token);
 }
-
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
@@ -159,7 +174,7 @@ async function apiGetMe() {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch("/api/user/auth", { headers });
-  return res.json(); 
+  return res.json();
 }
 
 async function apiSignup(name, email, password) {
@@ -182,12 +197,8 @@ async function apiSignin(email, password) {
   return { ok: res.ok, data };
 }
 
-
 function renderNavAuth(user) {
-  if (!navAuthEl) {
-    console.warn("找不到右上角登入元素，建議在 HTML 右上角加 id='nav-auth'");
-    return;
-  }
+  if (!navAuthEl) return;
 
   if (!user) {
     navAuthEl.textContent = "登入/註冊";
@@ -202,7 +213,6 @@ function renderNavAuth(user) {
     };
   }
 }
-
 
 async function onSubmitSignup(e) {
   e.preventDefault();
@@ -220,7 +230,7 @@ async function onSubmitSignup(e) {
   const result = await apiSignup(name, email, password);
   if (result.ok && result.data && result.data.ok) {
     setAuthMsg("註冊成功，請登入", false);
-    showSigninForm(true); 
+    showSigninForm(true);
     document.querySelector("#signin-email").value = email;
     document.querySelector("#signin-password").value = "";
   } else {
@@ -244,30 +254,30 @@ async function onSubmitSignin(e) {
   if (result.ok && result.data && result.data.token) {
     setToken(result.data.token);
     setAuthMsg("登入成功", false);
-    setTimeout(() => location.reload(), 500);  
-
+    setTimeout(() => location.reload(), 500);
   } else {
     setAuthMsg(result.data?.message || "登入失敗", true);
   }
 }
 
-
 async function initAuth() {
   ensureAuthModal();
 
-
   try {
     const me = await apiGetMe();
-    renderNavAuth(me.data); 
+    renderNavAuth(me.data);
 
- 
     if (me.data === null && getToken()) {
       clearToken();
     }
   } catch (err) {
-    console.error("initAuth failed:", err);  
+    console.error("initAuth failed:", err);
     renderNavAuth(null);
   }
 }
+
+
+document.addEventListener("DOMContentLoaded", initAuth);
+
 
 window.initAuth = initAuth;

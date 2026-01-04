@@ -1,0 +1,145 @@
+
+#auth-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.25);
+  display: none;                 
+  align-items: center;           
+  justify-content: center;       
+  z-index: 3000;
+  padding: 20px;
+}
+
+
+#auth-overlay[style*="display: flex"]{
+  display: flex !important;
+}
+
+.auth-dialog{
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 60px rgba(0,0,0,.25);
+}
+
+
+.auth-topbar{
+  height: 10px;
+  background: linear-gradient(270deg, #337788 0%, #66AABB 100%);
+}
+
+
+.auth-close{
+  position: absolute;
+  right: 10px;
+  top: 14px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-close img{
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+
+.auth-body{
+  padding: 15px;
+}
+
+.auth-title{
+  margin: 10px 0 15px;
+  text-align: center;
+  font-family: "Noto Sans TC", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 24px;
+  color: #666;
+}
+
+
+.auth-input{
+  width: 310px;
+  height: 47px;
+  display: block;
+  margin: 8px auto;
+  padding: 0 10px;
+
+  border: 1px solid #ccc;
+  border-radius: 5px;
+
+  font-family: "Noto Sans TC", Arial, sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #000;
+  background: #fff;
+  outline: none;
+}
+
+.auth-input::placeholder{ color: #999; }
+
+
+.auth-primary-btn{
+  width: 310px;
+  height: 46px;
+  margin: 10px auto 0;
+  border: none;
+  border-radius: 5px;
+
+  background: #448899;
+  color: #fff;
+
+  font-family: "Noto Sans TC", Arial, sans-serif;
+  font-weight: 400;
+  font-size: 19px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+
+.auth-switch{
+  width: 310px;
+  margin: 10px auto 0;
+  text-align: center;
+
+  font-family: "Noto Sans TC", Arial, sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #666;
+}
+
+.auth-link{
+  cursor: pointer;
+  text-decoration: none;
+}
+
+
+.auth-msg{
+  min-height: 22px;
+  margin-top: 6px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.auth-msg.error{ color:#c00; }
+.auth-msg.success{ color:#090; }
+
+
+.auth-dialog.is-signin{ min-height: 275px; height: auto; }
+.auth-dialog.is-signup{ min-height: 332px; height: auto; }
