@@ -487,3 +487,18 @@ section.info{ padding: 40px 0 60px; }
 }
 
 
+
+.nav-link{
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 54px;   
+  text-decoration: none;
+}
+
+
+.nav-link:focus,
+.nav-link:active{
+  outline: none;
+  box-shadow: none;
+}
