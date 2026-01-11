@@ -12,14 +12,22 @@ import mysql.connector
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+
 @app.get("/")
 def read_index():
     return FileResponse("static/index.html")
 
-#/attraction/{id}
+
 @app.get("/attraction/{attractionId}")
 def read_attraction(attractionId: int):
     return FileResponse("static/attraction.html")
+
+
+# Part 5-2 Booking Page Layout: /booking
+@app.get("/booking")
+def read_booking():
+    return FileResponse("static/booking.html")
 
 
 DB_HOST = "localhost"
@@ -30,8 +38,9 @@ DB_NAME = "taipei_trip"
 PAGE_SIZE = 8
 
 
-###part4
-# JWT / Password 
+# =========================
+# Part 4 JWT / Password
+# =========================
 JWT_SECRET = "987654321"
 JWT_ALG = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
@@ -73,7 +82,6 @@ def error_response(status_code: int):
     )
 
 
-###part4
 def get_user_from_bearer(request: Request) -> Optional[dict]:
     auth = request.headers.get("Authorization")
     if not auth:
@@ -94,19 +102,20 @@ def get_user_from_bearer(request: Request) -> Optional[dict]:
         return None
 
 
-def row_to_attraction(row: dict) -> dict:
-    images_value = row.get("images")
-
+def parse_images(images_value) -> list:
     if images_value is None:
-        images = []
-    elif isinstance(images_value, list):
-        images = images_value
-    elif isinstance(images_value, (bytes, bytearray)):
-        images = json.loads(images_value.decode("utf-8"))
-    elif isinstance(images_value, str):
-        images = json.loads(images_value)
-    else:
-        images = json.loads(str(images_value))
+        return []
+    if isinstance(images_value, list):
+        return images_value
+    if isinstance(images_value, (bytes, bytearray)):
+        return json.loads(images_value.decode("utf-8"))
+    if isinstance(images_value, str):
+        return json.loads(images_value)
+    return json.loads(str(images_value))
+
+
+def row_to_attraction(row: dict) -> dict:
+    images = parse_images(row.get("images"))
 
     return {
         "id": row["id"],
@@ -122,7 +131,9 @@ def row_to_attraction(row: dict) -> dict:
     }
 
 
-# 1. GET /api/attractions
+# =========================
+# Part 2 APIs
+# =========================
 @app.get("/api/attractions")
 def get_attractions(
     page: int = Query(0, ge=0),
@@ -163,7 +174,7 @@ def get_attractions(
 
             sql += "(name LIKE %s OR mrt LIKE %s)"
             params.append(kw_like)
-            params.append(kw_like)  
+            params.append(kw_like)
 
         sql += " ORDER BY id LIMIT %s OFFSET %s"
         params.append(PAGE_SIZE + 1)
@@ -195,7 +206,6 @@ def get_attractions(
         return error_response(500)
 
 
-# part4===== Request Bodies =====
 class SignupBody(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
@@ -207,7 +217,6 @@ class SigninBody(BaseModel):
     password: Optional[str] = None
 
 
-# 2. GET /api/attraction/{attractionId}
 @app.get("/api/attraction/{attractionId}")
 def get_attraction(attractionId: int):
     try:
@@ -232,7 +241,6 @@ def get_attraction(attractionId: int):
         return error_response(500)
 
 
-# 3. GET /api/categories
 @app.get("/api/categories")
 def get_categories():
     try:
@@ -258,7 +266,6 @@ def get_categories():
         return error_response(500)
 
 
-# 4. GET /api/mrts
 @app.get("/api/mrts")
 def get_mrts():
     try:
@@ -288,11 +295,12 @@ def get_mrts():
         return error_response(500)
 
 
-#part4
-# 1) Sign Up: POST /api/user
+# =========================
+# Part 4 User APIs
+# =========================
 @app.post("/api/user")
 def signup(body: SignupBody):
-    conn = None  
+    conn = None
     try:
         name = (body.name or "").strip()
         email = (body.email or "").strip().lower()
@@ -344,10 +352,9 @@ def signup(body: SignupBody):
             conn.close()
 
 
-# 2) Sign In: PUT /api/user/auth
 @app.put("/api/user/auth")
 def signin(body: SigninBody):
-    conn = None  
+    conn = None
     try:
         email = (body.email or "").strip().lower()
         password = (body.password or "").strip()
@@ -404,7 +411,6 @@ def signin(body: SigninBody):
             conn.close()
 
 
-# 3) Get current user: GET /api/user/auth
 @app.get("/api/user/auth")
 def get_current_user(request: Request):
     payload = get_user_from_bearer(request)
@@ -415,7 +421,7 @@ def get_current_user(request: Request):
     if user_id is None:
         return {"data": None}
 
-    conn = None  
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -436,6 +442,171 @@ def get_current_user(request: Request):
             content={"error": True, "message": "伺服器內部錯誤"},
             status_code=500,
         )
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# Part 5 Booking 
+
+class BookingBody(BaseModel):
+    attractionId: Optional[int] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    price: Optional[int] = None
+
+
+@app.get("/api/booking")
+def get_booking(request: Request):
+    payload = get_user_from_bearer(request)
+    if payload is None or payload.get("id") is None:
+        return error_response(403)
+
+    user_id = payload["id"]
+
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT member_id, attraction_id, date, time, price FROM booking WHERE member_id = %s",
+            (user_id,),
+        )
+        b = cursor.fetchone()
+
+        if b is None:
+            return {"data": None}
+
+        cursor.execute(
+            "SELECT id, name, address, images FROM attraction WHERE id = %s",
+            (b["attraction_id"],),
+        )
+        a = cursor.fetchone()
+
+      
+        if a is None:
+            return {"data": None}
+
+        image = ""
+        try:
+            imgs = json.loads(a["images"]) if a.get("images") else []
+            if isinstance(imgs, list) and len(imgs) > 0:
+                image = imgs[0]
+        except Exception:
+            image = ""
+
+        return {
+            "data": {
+                "attraction": {
+                    "id": a["id"],
+                    "name": a["name"],
+                    "address": a["address"],
+                    "image": image,
+                },
+                "date": str(b["date"]),
+                "time": b["time"],
+                "price": b["price"],
+            }
+        }
+
+    except Exception:
+        import traceback
+        print("\n==== ERROR GET /api/booking ====")
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
+        return error_response(500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.post("/api/booking")
+def create_or_replace_booking(body: BookingBody, request: Request):
+    payload = get_user_from_bearer(request)
+    if payload is None or payload.get("id") is None:
+        return error_response(403)
+
+    user_id = payload["id"]
+
+    attraction_id = body.attractionId
+    date = (body.date or "").strip()
+    time = (body.time or "").strip()
+    price = body.price
+
+
+    if attraction_id is None or date == "" or time == "" or price is None:
+        return error_response(400)
+
+    if time not in ["morning", "afternoon"]:
+        return error_response(400)
+
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+
+        cursor.execute("SELECT id FROM attraction WHERE id = %s", (attraction_id,))
+        a = cursor.fetchone()
+        if a is None:
+            return error_response(400)
+
+
+        cursor.execute("SELECT member_id FROM booking WHERE member_id = %s", (user_id,))
+        existed = cursor.fetchone()
+
+        if existed is None:
+            cursor.execute(
+                "INSERT INTO booking (member_id, attraction_id, date, time, price) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (user_id, attraction_id, date, time, price),
+            )
+        else:
+            cursor.execute(
+                "UPDATE booking SET attraction_id = %s, date = %s, time = %s, price = %s "
+                "WHERE member_id = %s",
+                (attraction_id, date, time, price, user_id),
+            )
+
+        conn.commit()
+        return {"ok": True}
+
+    except Exception:
+        import traceback
+        print("\n==== ERROR POST /api/booking ====")
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
+        return error_response(500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.delete("/api/booking")
+def delete_booking(request: Request):
+    payload = get_user_from_bearer(request)
+    if payload is None or payload.get("id") is None:
+        return error_response(403)
+
+    user_id = payload["id"]
+
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM booking WHERE member_id = %s", (user_id,))
+        conn.commit()
+
+        return {"ok": True}
+
+    except Exception:
+        import traceback
+        print("\n==== ERROR DELETE /api/booking ====")
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
+        return error_response(500)
     finally:
         if conn is not None:
             conn.close()

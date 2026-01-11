@@ -55,7 +55,7 @@ button, input{ font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 16px;
   line-height: 13px;
   color: #666666;
@@ -70,6 +70,14 @@ button, input{ font-family: inherit; }
 .nav-link:hover,
 .nav-btn:hover{
   opacity: .85;
+}
+
+
+.nav-booking-btn{
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 

@@ -267,14 +267,42 @@ async function initAuth() {
     const me = await apiGetMe();
     renderNavAuth(me.data);
 
+
+    bindNavBooking();
+
+
     if (me.data === null && getToken()) {
       clearToken();
     }
   } catch (err) {
     console.error("initAuth failed:", err);
-    renderNavAuth(null);
+    renderNavAuth(null);    
+    bindNavBooking();
   }
 }
+
+// ===== Week5 Part 5-3 =====
+function bindNavBooking() {
+  const navBookingEl = document.querySelector("#nav-booking");
+  if (!navBookingEl) return;
+
+  navBookingEl.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    try {
+      const me = await apiGetMe(); 
+      if (!me || !me.data) {
+        openAuthModal();
+        return;
+      }
+      location.href = "/booking";
+    } catch (err) {
+      openAuthModal();
+    }
+  });
+}
+
+
 
 
 document.addEventListener("DOMContentLoaded", initAuth);
