@@ -502,3 +502,14 @@
     padding: 10px 20px;
   }
 }
+
+/* TapPay iframe 容器*/
+.tappay-field {
+  height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #e8e8e8;
+  border-radius: 5px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+}

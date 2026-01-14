@@ -8,9 +8,17 @@ from passlib.context import CryptContext
 import jwt
 import json
 import mysql.connector
+import os
+import httpx
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/thankyou")
+def read_thankyou():
+    return FileResponse("static/thankyou.html")
+
 
 
 
@@ -38,9 +46,8 @@ DB_NAME = "taipei_trip"
 PAGE_SIZE = 8
 
 
-# =========================
 # Part 4 JWT / Password
-# =========================
+
 JWT_SECRET = "987654321"
 JWT_ALG = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
@@ -131,9 +138,7 @@ def row_to_attraction(row: dict) -> dict:
     }
 
 
-# =========================
-# Part 2 APIs
-# =========================
+#  Part 2 APIs
 @app.get("/api/attractions")
 def get_attractions(
     page: int = Query(0, ge=0),
@@ -295,9 +300,7 @@ def get_mrts():
         return error_response(500)
 
 
-# =========================
-# Part 4 User APIs
-# =========================
+#  Part 4 User APIs
 @app.post("/api/user")
 def signup(body: SignupBody):
     conn = None
@@ -607,6 +610,192 @@ def delete_booking(request: Request):
         traceback.print_exc()
         print("==== END ERROR ====\n")
         return error_response(500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# Part 6 Order APIs
+
+
+TAPPAY_PARTNER_KEY = os.getenv("TAPPAY_PARTNER_KEY", "").strip()
+TAPPAY_MERCHANT_ID = os.getenv("TAPPAY_MERCHANT_ID", "").strip()
+TAPPAY_PAY_BY_PRIME_URL = "https://sandbox.tappaysdk.com/tpc/payment/pay-by-prime"  
+
+
+class ContactBody(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class OrderCreateBody(BaseModel):
+    prime: Optional[str] = None
+    contact: Optional[ContactBody] = None
+
+
+def gen_order_number() -> str:    
+    now = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    micro = datetime.now(timezone.utc).strftime("%f")
+    return f"{now}{micro}"
+
+
+@app.post("/api/orders")
+async def create_order(body: OrderCreateBody, request: Request):   
+    payload = get_user_from_bearer(request)
+    if payload is None or payload.get("id") is None:
+        return error_response(403)
+
+    user_id = payload["id"]
+
+
+    prime = (body.prime or "").strip()
+    if prime == "":
+        return JSONResponse(
+            content={"error": True, "message": "Prime 不可為空"},
+            status_code=400,
+        )
+
+    contact = body.contact or ContactBody()
+    contact_name = (contact.name or "").strip()
+    contact_email = (contact.email or "").strip()
+    contact_phone = (contact.phone or "").strip()
+
+    if contact_name == "" or contact_email == "" or contact_phone == "":
+        return JSONResponse(
+            content={"error": True, "message": "聯絡資訊不可空白"},
+            status_code=400,
+        )
+
+  
+    if TAPPAY_PARTNER_KEY == "" or TAPPAY_MERCHANT_ID == "":
+        return JSONResponse(
+            content={"error": True, "message": "TapPay 金鑰未設定（TAPPAY_PARTNER_KEY / TAPPAY_MERCHANT_ID）"},
+            status_code=500,
+        )
+
+    conn = None
+    order_number = gen_order_number()
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+
+        cursor.execute(
+            "SELECT member_id, attraction_id, date, time, price FROM booking WHERE member_id = %s",
+            (user_id,),
+        )
+        b = cursor.fetchone()
+
+        if b is None:
+            return JSONResponse(
+                content={"error": True, "message": "目前沒有待預訂行程"},
+                status_code=400,
+            )
+
+        
+        cursor.execute(
+            """
+            INSERT INTO orders
+              (order_number, member_id, attraction_id, date, time, price,
+               contact_name, contact_email, contact_phone, status)
+            VALUES
+              (%s, %s, %s, %s, %s, %s,
+               %s, %s, %s, 'UNPAID')
+            """,
+            (
+                order_number,
+                user_id,
+                b["attraction_id"],
+                b["date"],
+                b["time"],
+                b["price"],
+                contact_name,
+                contact_email,
+                contact_phone,
+            ),
+        )
+        conn.commit()
+
+       
+        tappay_req = {
+            "prime": prime,
+            "partner_key": TAPPAY_PARTNER_KEY,
+            "merchant_id": TAPPAY_MERCHANT_ID,
+            "details": "Taipei Day Trip Order",
+            "amount": int(b["price"]),
+            "cardholder": {
+                "phone_number": contact_phone,
+                "name": contact_name,
+                "email": contact_email,
+            },
+            "remember": False,
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": TAPPAY_PARTNER_KEY,  
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(TAPPAY_PAY_BY_PRIME_URL, json=tappay_req, headers=headers)
+            tappay_data = resp.json()
+
+        tappay_status = int(tappay_data.get("status", -999))
+        tappay_msg = str(tappay_data.get("msg", ""))
+        rec_trade_id = tappay_data.get("rec_trade_id")
+        bank_transaction_id = tappay_data.get("bank_transaction_id")
+
+ 
+        cursor.execute(
+            """
+            INSERT INTO payments
+              (order_number, tappay_status, tappay_msg, rec_trade_id, bank_transaction_id, raw_json)
+            VALUES
+              (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                order_number,
+                tappay_status,
+                tappay_msg[:255],
+                rec_trade_id,
+                bank_transaction_id,
+                json.dumps(tappay_data, ensure_ascii=False),
+            ),
+        )
+
+       
+        if tappay_status == 0:
+            cursor.execute(
+                "UPDATE orders SET status = 'PAID' WHERE order_number = %s",
+                (order_number,),
+            )
+           
+            cursor.execute("DELETE FROM booking WHERE member_id = %s", (user_id,))
+
+        conn.commit()
+
+
+        return {
+            "data": {
+                "number": order_number,
+                "payment": {
+                    "status": tappay_status,
+                    "message": tappay_msg,
+                },
+            }
+        }
+
+    except Exception:
+        import traceback
+        print("\n==== ERROR POST /api/orders ====")
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
+        return JSONResponse(
+            content={"error": True, "message": "伺服器內部錯誤"},
+            status_code=500,
+        )
     finally:
         if conn is not None:
             conn.close()

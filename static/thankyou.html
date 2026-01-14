@@ -4,8 +4,112 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thank You</title>
+  <link rel="stylesheet" href="/static/index.css" />
+  <link rel="icon" href="data:,">
+ 
+  <style>
+    .thankyou-main{
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 10px;
+      min-height: calc(100vh - 54px - 120px);
+      box-sizing: border-box;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .thankyou-card{
+      width: min(600px, 100%);
+      border: 1px solid #e6e6e6;
+      border-radius: 8px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .thankyou-title{
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .thankyou-line{
+      margin: 8px 0;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .thankyou-number{
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .thankyou-actions{
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .thankyou-btn{
+      height: 36px;
+      padding: 0 14px;
+      border: 1px solid #448899;
+      border-radius: 6px;
+      background: #fff;
+      color: #448899;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .thankyou-btn.primary{
+      background: #448899;
+      color: #fff;
+    }
+  </style>
 </head>
+
 <body>
-  
+ 
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="logo">台北一日遊</a>
+      <div class="nav-right">
+        <a class="nav-link" href="/booking">預定行程</a>
+        <button id="nav-auth" type="button" class="nav-btn">登入/註冊</button>
+      </div>
+    </div>
+  </header>
+
+
+  <main class="thankyou-main">
+    <section class="thankyou-card">
+      <h1 class="thankyou-title">感謝訂購！</h1>
+
+      <p class="thankyou-line">
+        您的訂單編號：<span id="order-number" class="thankyou-number">讀取中...</span>
+      </p>
+
+      <p class="thankyou-line" id="hint">
+        我們已收到您的訂單，若付款成功會寄送確認資訊至您的電子郵件。
+      </p>
+
+      <div class="thankyou-actions">
+        <button class="thankyou-btn primary" id="btn-home" type="button">回首頁</button>
+        <button class="thankyou-btn" id="btn-booking" type="button">回預定行程</button>
+      </div>
+    </section>
+  </main>
+
+
+  <footer class="footer">
+    <div>COPYRIGHT © 2026 台北一日遊</div>
+  </footer>
+
+
+  <script src="/static/auth.js"></script>
+
+
+  <script src="/static/thankyou.js"></script>
 </body>
 </html>
+
+
+
+
+
