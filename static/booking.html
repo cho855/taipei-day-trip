@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>台北一日遊 - 預定行程</title>
 
-  <!-- 共用 NAV / base -->
+
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/index.css" />
   <link rel="stylesheet" href="/static/auth.css" />
   <link rel="stylesheet" href="/static/booking.css" />
 </head>
 
 <body>
-  <!-- NAV -->
+
   <header class="nav">
     <div class="container nav-inner">
       <a href="/" class="logo">台北一日遊</a>
@@ -95,25 +96,27 @@
     <!-- divider -->
     <hr class="divider" />
 
-    <!-- 信用卡 -->
-    <section id="payment-section" class="section">
-      <h2 class="section-title">信用卡付款資訊</h2>
+<!-- 信用卡 -->
+<section id="payment-section" class="section">
+  <h2 class="section-title">信用卡付款資訊</h2>
 
-      <div class="form-row">
-        <label class="form-label">卡片號碼：</label>
-        <input id="card-number" class="form-input" type="text" placeholder="**** **** **** ****" />
-      </div>
+  <div class="form-row">
+    <label class="form-label">卡片號碼：</label>
+    <!-- TapPay 會把 iframe 塞到這個 div 裡 -->
+    <div id="card-number" class="form-input tappay-field"></div>
+  </div>
 
-      <div class="form-row">
-        <label class="form-label">過期時間：</label>
-        <input id="card-exp" class="form-input" type="text" placeholder="MM / YY" />
-      </div>
+  <div class="form-row">
+    <label class="form-label">過期時間：</label>
+    <div id="card-expiration-date" class="form-input tappay-field"></div>
+  </div>
 
-      <div class="form-row">
-        <label class="form-label">驗證密碼：</label>
-        <input id="card-ccv" class="form-input" type="text" placeholder="CCV" />
-      </div>
-    </section>
+  <div class="form-row">
+    <label class="form-label">驗證密碼：</label>
+    <div id="card-ccv" class="form-input tappay-field"></div>
+  </div>
+</section>
+
 
     <!-- checkout -->
     <section id="checkout-section" class="checkout">
@@ -128,7 +131,16 @@
   <footer class="footer">COPYRIGHT © 2021 台北一日遊</footer>
 
   <!-- scripts -->
+  <script src="https://js.tappaysdk.com/sdk/tpdirect/v5.18.0"></script>
+  <script>
+    window.TAPPAY_APP_ID =166466;        
+    window.TAPPAY_APP_KEY ="app_7e6m7jPLHo9oKirCyjhfLYBynKAcmk8FOCECTwHmi9a7ClVUD1Hf0DItioa7";    
+    window.TAPPAY_ENV ="sandbox";   
+  </script>
+
   <script src="/static/auth.js" defer></script>
   <script src="/static/booking.js" defer></script>
+  
+
 </body>
 </html>
