@@ -1,3 +1,8 @@
+import jwt
+import json
+import mysql.connector
+import os
+import httpx
 from typing import Optional, List
 from fastapi import Query, FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse
@@ -5,11 +10,22 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
-import jwt
-import json
-import mysql.connector
-import os
-import httpx
+from mysql.connector.pooling import MySQLConnectionPool
+from dotenv import load_dotenv
+load_dotenv()
+
+
+#part 7 connection pool
+db_pool = MySQLConnectionPool(
+    pool_name="taipei_trip_pool",
+    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    pool_reset_session=True,
+    host=os.getenv("DB_HOST", "localhost"),
+    user=os.getenv("DB_USER", "root"),
+    password=os.getenv("DB_PASSWORD", ""),
+    database=os.getenv("DB_NAME", ""),
+)
+
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -37,20 +53,18 @@ def read_attraction(attractionId: int):
 def read_booking():
     return FileResponse("static/booking.html")
 
-
-DB_HOST = "localhost"
-DB_USER = "tripuser"
-DB_PASSWORD = "abc6788"
-DB_NAME = "taipei_trip"
+#part 7-2
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_NAME = os.getenv("DB_NAME", "taipei_trip")
 
 PAGE_SIZE = 8
 
-
-# Part 4 JWT / Password
-
-JWT_SECRET = "987654321"
-JWT_ALG = "HS256"
-JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
+#part 7-2
+JWT_SECRET = os.getenv("JWT_SECRET", "change-me")
+JWT_ALG = os.getenv("JWT_ALG", "HS256")
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -72,14 +86,9 @@ def create_token(payload: dict) -> str:
 def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
-
+#part 7
 def get_connection():
-    return mysql.connector.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
-    )
+    return db_pool.get_connection()
 
 
 def error_response(status_code: int):
