@@ -1,6 +1,5 @@
 import jwt
 import json
-import mysql.connector
 import os
 import httpx
 from typing import Optional, List
@@ -16,14 +15,25 @@ load_dotenv()
 
 
 #part 7 connection pool
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
+
+if not DB_USER or not DB_PASSWORD or not DB_NAME:
+    raise RuntimeError(
+        "Missing DB env vars: DB_USER / DB_PASSWORD / DB_NAME (check .env)"
+    )
+
 db_pool = MySQLConnectionPool(
     pool_name="taipei_trip_pool",
-    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    pool_size=DB_POOL_SIZE,
     pool_reset_session=True,
-    host=os.getenv("DB_HOST", "localhost"),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", ""),
-    database=os.getenv("DB_NAME", ""),
+    host=DB_HOST,
+    user=DB_USER,
+    password=DB_PASSWORD,
+    database=DB_NAME,
 )
 
 
@@ -53,18 +63,17 @@ def read_attraction(attractionId: int):
 def read_booking():
     return FileResponse("static/booking.html")
 
-#part 7-2
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_NAME", "taipei_trip")
 
 PAGE_SIZE = 8
-
 #part 7-2
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me")
+JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")
 JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))
+
+if not JWT_SECRET:
+    raise RuntimeError("Missing JWT_SECRET in .env")
+
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -86,7 +95,7 @@ def create_token(payload: dict) -> str:
 def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
-#part 7
+#part 7-1
 def get_connection():
     return db_pool.get_connection()
 
@@ -147,13 +156,14 @@ def row_to_attraction(row: dict) -> dict:
     }
 
 
-#  Part 2 APIs
+#  Part 2 APIs (part7 修)
 @app.get("/api/attractions")
 def get_attractions(
     page: int = Query(0, ge=0),
     category: Optional[str] = None,
     keyword: Optional[str] = None,
 ):
+    conn = None
     try:
         offset = page * PAGE_SIZE
 
@@ -166,26 +176,16 @@ def get_attractions(
 
         if category is not None and category.strip() != "":
             cat = category.strip()
-
-            if not has_where:
-                sql += " WHERE "
-                has_where = True
-            else:
-                sql += " AND "
-
+            sql += " WHERE " if not has_where else " AND "
+            has_where = True
             sql += "category = %s"
             params.append(cat)
 
         if keyword is not None and keyword.strip() != "":
             kw_raw = keyword.strip()
             kw_like = "%" + kw_raw + "%"
-
-            if not has_where:
-                sql += " WHERE "
-                has_where = True
-            else:
-                sql += " AND "
-
+            sql += " WHERE " if not has_where else " AND "
+            has_where = True
             sql += "(name LIKE %s OR mrt LIKE %s)"
             params.append(kw_like)
             params.append(kw_like)
@@ -197,18 +197,13 @@ def get_attractions(
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-        conn.close()
-
         if len(rows) > PAGE_SIZE:
             next_page = page + 1
             rows = rows[:PAGE_SIZE]
         else:
             next_page = None
 
-        data = []
-        for r in rows:
-            data.append(row_to_attraction(r))
-
+        data = [row_to_attraction(r) for r in rows]
         return {"nextPage": next_page, "data": data}
 
     except Exception as e:
@@ -218,6 +213,11 @@ def get_attractions(
         traceback.print_exc()
         print("==== END ERROR ====\n")
         return error_response(500)
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 class SignupBody(BaseModel):
@@ -231,15 +231,16 @@ class SigninBody(BaseModel):
     password: Optional[str] = None
 
 
+#(part7 修)
 @app.get("/api/attraction/{attractionId}")
 def get_attraction(attractionId: int):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute("SELECT * FROM attraction WHERE id = %s", (attractionId,))
         row = cursor.fetchone()
-        conn.close()
 
         if row is None:
             return error_response(400)
@@ -254,9 +255,14 @@ def get_attraction(attractionId: int):
         print("==== END ERROR ====\n")
         return error_response(500)
 
+    finally:
+        if conn is not None:
+            conn.close()
 
+#(part7 修)
 @app.get("/api/categories")
 def get_categories():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -267,21 +273,26 @@ def get_categories():
             "ORDER BY category"
         )
         rows = cursor.fetchall()
-        conn.close()
 
-        categories = []
-        for r in rows:
-            categories.append(r["category"])
-
+        categories = [r["category"] for r in rows]
         return {"data": categories}
 
     except Exception as e:
-        print("ERROR /api/categories:", repr(e))
+        import traceback
+        print("\n==== ERROR /api/categories ====")
+        print("Exception:", repr(e))
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
         return error_response(500)
 
+    finally:
+        if conn is not None:
+            conn.close()
 
+#(part7 修)
 @app.get("/api/mrts")
 def get_mrts():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -296,17 +307,22 @@ def get_mrts():
             """
         )
         rows = cursor.fetchall()
-        conn.close()
 
-        mrts = []
-        for r in rows:
-            mrts.append(r["mrt"])
-
+        mrts = [r["mrt"] for r in rows]
         return {"data": mrts}
 
     except Exception as e:
-        print("ERROR /api/mrts:", repr(e))
+        import traceback
+        print("\n==== ERROR /api/mrts ====")
+        print("Exception:", repr(e))
+        traceback.print_exc()
+        print("==== END ERROR ====\n")
         return error_response(500)
+
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 
 #  Part 4 User APIs
